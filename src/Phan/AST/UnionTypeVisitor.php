@@ -3165,7 +3165,7 @@ class UnionTypeVisitor extends AnalysisVisitor
 
                     // Map template types to concrete types
                     // TODO: When the template types are part of the method doc comment, don't look it up in the class union type
-                    if (isset($node->children['expr']) && $union_type->hasTemplateTypeRecursive()) {
+                    if (isset($node->children['expr']) /*&& (a||b)*/) {
                         // Get the type of the object calling the method
                         $expression_type = UnionTypeVisitor::unionTypeFromNode(
                             $this->code_base,
@@ -3174,10 +3174,34 @@ class UnionTypeVisitor extends AnalysisVisitor
                             $this->should_catch_issue_exception
                         );
 
-                        // Map template types to concrete types
-                        $union_type = $union_type->withTemplateParameterTypeMap(
-                            $expression_type->getTemplateParameterTypeMap($this->code_base)
-                        );
+                        if (!$method->isStatic() && $union_type->hasTypeMatchingCallback(
+                            function (Type $type): bool {
+                                return $type->hasStaticOrSelfTypesRecursive($this->code_base);
+                            }
+                        )) {
+                            // A method call like `$foo->returnThis()` returns the same type as
+                            // `$foo`, filtered to only the subtypes of the class we're analyzing.
+                            // This preserves intersection types and generic type parameters,
+                            // but avoids introducing impossible cases when `$foo` was a union.
+                            $static_type_for_this_call = $expression_type->findTypeMatchingCallback(
+                                function (Type $type) use ($class): bool {
+                                    return $type->isSubclassOf($class->getFQSEN()->asType(), $this->code_base);
+                                }
+                            );
+                            if ($static_type_for_this_call) {
+                                $union_type = $union_type
+                                    // TODO: This is a workaround for Method::getUnionType() adding
+                                    // the method's class to the static type, it shouldn't do that
+                                    ->withoutType($class->getFQSEN()->asType())
+                                    ->withStaticResolvedTo($static_type_for_this_call);
+                            }
+                        }
+                        if ($union_type->hasTemplateTypeRecursive()) {
+                            // Map template types to concrete types
+                            $union_type = $union_type->withTemplateParameterTypeMap(
+                                $expression_type->getTemplateParameterTypeMap($this->code_base)
+                            );
+                        }
                     }
 
                     // Resolve any references to `static` or `static[]`

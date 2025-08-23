@@ -3467,6 +3467,28 @@ class Type implements Stringable
         return self::fromType($this, $new_template_parameter_type_list);
     }
 
+    public function withStaticResolvedTo(
+        Type $staticType
+    ): Type {
+        if ($this->template_parameter_type_list) {
+            return $this->withStaticResolvedToTemplate($staticType);
+        }
+        return $this;
+    }
+
+    private function withStaticResolvedToTemplate(
+        Type $staticType
+    ): Type {
+        $new_template_parameter_type_list = [];
+        foreach ($this->template_parameter_type_list as $t) {
+            $new_template_parameter_type_list[] = $t->withStaticResolvedTo($staticType);
+        }
+        if ($new_template_parameter_type_list === $this->template_parameter_type_list) {
+            return $this;
+        }
+        return self::fromType($this, $new_template_parameter_type_list);
+    }
+
     /**
      * @return string
      * A string representation of this type in FQSEN form.

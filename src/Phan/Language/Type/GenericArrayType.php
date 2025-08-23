@@ -691,6 +691,19 @@ class GenericArrayType extends ArrayType implements GenericArrayInterface
         );
     }
 
+    public function withStaticResolvedTo(Type $staticType): Type
+    {
+        $resolved_element_type = $this->element_type->withStaticResolvedTo($staticType);
+        if ($this->element_type === $resolved_element_type) {
+            return $this;
+        }
+        return static::fromElementType(
+            $resolved_element_type,
+            $this->is_nullable,
+            $this->key_type
+        );
+    }
+
     /**
      * Returns a type where all referenced union types (e.g. in generic arrays) have real type sets removed.
      * @phan-real-return static

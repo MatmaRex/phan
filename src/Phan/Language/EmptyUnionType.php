@@ -237,9 +237,16 @@ final class EmptyUnionType extends UnionType
      * A new UnionType with any references to 'static' resolved
      * in the given context.
      */
-    public function withStaticResolvedInContext(
-        Context $context
-    ): UnionType {
+    public function withStaticResolvedInContext(Context $context): UnionType {
+        return $this;
+    }
+
+    /**
+     * @return UnionType
+     * A new UnionType with any references to 'static' resolved
+     * to the given type.
+     */
+    public function withStaticResolvedTo(Type $staticType): UnionType {
         return $this;
     }
 
